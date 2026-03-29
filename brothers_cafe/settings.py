@@ -104,20 +104,4 @@ CSRF_TRUSTED_ORIGINS = [
 SHOP_NAME = "Brothers Cafe"
 SHOP_LOCATION = "Tirupattur"
 SHOP_GSTIN = "23278537256752"
-
-# ───────── AUTO SUPERUSER FOR RENDER (FREE PLAN FIX) ─────────
-from django.contrib.auth import get_user_model
-
-User = get_user_model()
-
-if os.environ.get("RENDER") == "true":
-    try:
-        if not User.objects.filter(username="admin").exists():
-            User.objects.create_superuser(
-                username="admin",
-                email="admin@example.com",
-                password="admin123"
-            )
-            print("✅ Superuser created (admin/admin123)")
-    except Exception as e:
-        print("Superuser creation skipped:", e)
+SHOP_FASSI="4627384563244234344"
