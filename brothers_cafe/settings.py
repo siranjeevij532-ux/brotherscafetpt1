@@ -3,12 +3,17 @@ import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'brothers-cafe-tirupattur-secret-key-2024-change-in-production'
+# SECURITY
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'brothers-cafe-tirupattur-secret-key-2024-change-in-production'
+)
 
-DEBUG = True
+DEBUG = os.environ.get("DEBUG", "False") == "True"
 
 ALLOWED_HOSTS = ['*']
 
+# APPLICATIONS
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -19,8 +24,10 @@ INSTALLED_APPS = [
     'restaurant',
 ]
 
+# MIDDLEWARE
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # important for Render
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -31,6 +38,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = 'brothers_cafe.urls'
 
+# TEMPLATES
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -49,6 +57,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'brothers_cafe.wsgi.application'
 
+# DATABASE
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -56,59 +65,59 @@ DATABASES = {
     }
 }
 
+# Use PostgreSQL on Render automatically
+try:
+    import dj_database_url
+    db_url = os.environ.get("DATABASE_URL")
+    if db_url:
+        DATABASES["default"] = dj_database_url.parse(db_url, conn_max_age=600)
+except:
+    pass
+
+# PASSWORD VALIDATION
 AUTH_PASSWORD_VALIDATORS = []
 
+# INTERNATIONAL
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
 USE_TZ = True
 
+# STATIC FILES
 STATIC_URL = '/static/'
-STATICFILES_DIRS = []  # Add paths here if you have static files
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
+# MEDIA FILES
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Shop Settings
+# CSRF (important for Render)
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.onrender.com',
+    'https://*.render.com',
+]
+
+# SHOP SETTINGS
 SHOP_NAME = "Brothers Cafe"
 SHOP_LOCATION = "Tirupattur"
 SHOP_GSTIN = "23278537256752"
 
+# ───────── AUTO SUPERUSER FOR RENDER (FREE PLAN FIX) ─────────
+from django.contrib.auth import get_user_model
 
-# ── PRODUCTION / RENDER SETTINGS ─────────────────────────────
-import os
+User = get_user_model()
 
-ALLOWED_HOSTS = ['*']
-CSRF_TRUSTED_ORIGINS = [
-    'https://*.render.com',
-    'https://*.onrender.com',
-    'http://localhost:8000',
-    'http://127.0.0.1:8000',
-]
-
-# WhiteNoise for static files
-if 'whitenoise.middleware.WhiteNoiseMiddleware' not in MIDDLEWARE:
-    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
-
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-
-# Database - PostgreSQL on Render, SQLite locally
-try:
-    import dj_database_url
-    import os as _os
-    _db_url = _os.environ.get('DATABASE_URL')
-    if _db_url:
-        DATABASES = {'default': dj_database_url.config(conn_max_age=600)}
-except ImportError:
-    pass  # Local dev without dj_database_url — uses SQLite
-
-# Secret key from environment variable
-SECRET_KEY = os.environ.get('SECRET_KEY', 'brothers-cafe-tirupattur-secret-key-2024-change-in-production')
-
-# Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+if os.environ.get("RENDER") == "true":
+    try:
+        if not User.objects.filter(username="admin").exists():
+            User.objects.create_superuser(
+                username="admin",
+                email="admin@example.com",
+                password="admin123"
+            )
+            print("✅ Superuser created (admin/admin123)")
+    except Exception as e:
+        print("Superuser creation skipped:", e)
